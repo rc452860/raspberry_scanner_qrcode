@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+import zbar
+import Image
+import cv2
+import cv
+import numpy as np
+import datetime
+import argparse
+import time
+import picamera
+import picamera.array
+import time
+import numpy as np
+import cv2
+import io
+import datetime
+#import pdb
+
+def QR(camera, scanner):
+    with io.BytesIO() as stream:
+        for frame in camera.capture_continuous(stream, format='jpeg', resize = (400,400), use_video_port=True):
+            data = np.fromstring(frame.getvalue(),dtype=np.uint8)
+            d1 = datetime.datetime.now()
+            cv2_im = cv2.imdecode(data, 1)
+            gray = cv2.cvtColor(cv2_im,cv2.COLOR_BGR2GRAY)
+            pil_im = Image.fromarray(gray)
+            width, height = pil_im.size
+            raw = pil_im.tostring()
+            image = zbar.Image(width, height, 'Y800', raw)
+            scanner.scan(image)
+            for symbol in image:
+                print 'decoded', symbol.type, 'symbol', '"%s"' % symbol.data
+            del(image)
+            d = datetime.datetime.now() - d1
+            print "consuming %dms" % (d.microseconds/1000)
+            stream.seek(0)
+            stream.truncate(0)
+            time.sleep(0.5)
+def QRScanner():
+    with picamera.PiCamera() as camera:
+        # create a reader
+        #pdb.set_trace()
+        scanner = zbar.ImageScanner()
+        # configure the reader
+        scanner.parse_config('enable')
+        QR(camera, scanner)
+if __name__ == "__main__":
+  QRScanner()
